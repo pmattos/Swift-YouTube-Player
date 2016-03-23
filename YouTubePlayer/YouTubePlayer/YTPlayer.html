@@ -21,27 +21,62 @@
 			html, body { width: 100%; height: 100%; }
 		</style>
 	</head>
+	<!--
+	Based on the **YouTube Player API Reference**:
+	https://developers.google.com/youtube/iframe_api_reference#Getting_Started
+	-->
 	<body>
-		<div id="player"></div>
+		<!--
+		 Replaces <div> with explicit <iframe>.
+		 This is a hack for fixing YouTube Player *events*.
+		 See http://stackoverflow.com/questions/34345124 for more info.
+		 (TL;DR: Setting the `origin` key prevents *all* video events from firing.)
+		-->
+		<iframe id="player" type="text/html" width="100%" height="100%" frameborder="0"
+			src="https://www.youtube.com/embed/$VIDEO_ID?enablejsapi=1
+			&playsinline=$PLAYS_INLINE
+			&showcontrols=$SHOW_CONTROLS
+			&showinfo=$SHOW_INFO
+			&modestbranding=$MODEST_BRANDING">
+		</iframe>
 		<script src="https://www.youtube.com/iframe_api"></script>
 		<script>
+		// This function creates an <iframe> (and YouTube player)
+		// *after* the API code above downloads.
 		var player;
-		YT.ready(function() {
-				 player = new YT.Player('player', %@);
-				 window.location.href = 'ytplayer://onYouTubeIframeAPIReady';
-				 });
-				 
+		function onYouTubeIframeAPIReady() {
+			player = new YT.Player('player', { });
+			player.addEventListener('onReady', 'onReady');
+			player.addEventListener('onStateChange', 'onStateChange');
+			player.addEventListener('onPlaybackQualityChange', 'onPlaybackQualityChange');
+			player.addEventListener('onPlaybackRateChange', 'onPlaybackRateChange');
+			player.addEventListener('onError', 'onError');
+			window.location.href = 'youtube://onYouTubeIframeAPIReady';
+		}
+		// YouTube player events.
 		function onReady(event) {
-			window.location.href = 'ytplayer://onReady?data=' + event.data;
+			// The `data` property is unavailable.
+			window.location.href = 'youtube://onReady';
 		}
 		function onStateChange(event) {
-			window.location.href = 'ytplayer://onStateChange?data=' + event.data;
+			// The `data` property contains the *new state*.
+			window.location.href = 'youtube://onStateChange?state=' + event.data;
 		}
 		function onPlaybackQualityChange(event) {
-			window.location.href = 'ytplayer://onPlaybackQualityChange?data=' + event.data;
+			// The `data` property identifies the new *playback quality*.
+			window.location.href = 'youtube://onPlaybackQualityChange?quality=' + event.data;
 		}
-		function onPlayerError(event) {
-			window.location.href = 'ytplayer://onError?data=' + event.data;
+		function onPlaybackRateChange(event) {
+			// The `data` property is a number that identifies the new *playback rate*.
+			window.location.href = 'youtube://onPlaybackRateChange?rate=' + event.data;
+		}
+		function onError(event) {
+			// The `data` property identifies the type of *error* that occurred.
+			window.location.href = 'youtube://onError?error=' + event.data;
+		}
+		function getVideoBufferedFraction(event) {
+			// Hack for improving logging output.
+			return Math.round(player.getVideoLoadedFraction() * 100) / 100
 		}
 		</script>
 	</body>
